@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.satkickstart.dto.QuestionDto;
 import com.satkickstart.model.Section;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -46,6 +47,7 @@ public class QuestionService {
     }
 
     private List<QuestionDto> fetchFromApi(String section, String domain, int limit) {
+        // OpenSAT returns a JSON array — use ParameterizedTypeReference, not bodyToFlux
         List<OpenSatQuestion> raw = webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/questions")
@@ -54,8 +56,7 @@ public class QuestionService {
                         .queryParam("limit", limit)
                         .build())
                 .retrieve()
-                .bodyToFlux(OpenSatQuestion.class)
-                .collectList()
+                .bodyToMono(new ParameterizedTypeReference<List<OpenSatQuestion>>() {})
                 .block();
 
         if (raw == null) return List.of();

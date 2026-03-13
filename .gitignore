@@ -1,3 +1,6 @@
+# Root local config
+.env.local
+
 # Backend
 backend/target/
 backend/.mvn/wrapper/maven-wrapper.jar

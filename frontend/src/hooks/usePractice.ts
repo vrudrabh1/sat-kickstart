@@ -33,8 +33,13 @@ export function usePractice(sessionId: string, section: Section) {
         loading: false,
         error: questions.length === 0 ? 'No questions available.' : null,
       }));
-    } catch {
-      setState((s) => ({ ...s, loading: false, error: 'Failed to load question.' }));
+    } catch (err) {
+      console.error('[usePractice] Failed to load question:', err);
+      setState((s) => ({
+        ...s,
+        loading: false,
+        error: 'Failed to load question — is the backend running on port 8080?',
+      }));
     }
   }, [sessionId, section]);
 
@@ -60,7 +65,8 @@ export function usePractice(sessionId: string, section: Section) {
           totalAttempts: result.totalAttempts,
           accuracy: result.accuracy,
         }));
-      } catch {
+      } catch (err) {
+        console.error('[usePractice] Failed to submit answer:', err);
         setState((s) => ({ ...s, error: 'Failed to submit answer.' }));
       }
     },

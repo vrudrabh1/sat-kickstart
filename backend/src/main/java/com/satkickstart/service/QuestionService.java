@@ -5,9 +5,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.satkickstart.dto.QuestionDto;
 import com.satkickstart.model.Section;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -46,20 +49,28 @@ public class QuestionService {
     }
 
     private List<QuestionDto> fetchFromApi(String section, String domain, int limit) {
+        // Fetch a larger pool so we can shuffle and avoid repeating the same question.
+        // OpenSAT always returns results in the same order, so without shuffling
+        // limit=1 would return the identical question every time.
+        int poolSize = Math.max(limit * 20, 50);
+
+        // OpenSAT returns a JSON array — use ParameterizedTypeReference, not bodyToFlux
         List<OpenSatQuestion> raw = webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/questions")
                         .queryParam("section", section)
                         .queryParamIfPresent("domain", java.util.Optional.ofNullable(domain))
-                        .queryParam("limit", limit)
+                        .queryParam("limit", poolSize)
                         .build())
                 .retrieve()
-                .bodyToFlux(OpenSatQuestion.class)
-                .collectList()
+                .bodyToMono(new ParameterizedTypeReference<List<OpenSatQuestion>>() {})
                 .block();
 
-        if (raw == null) return List.of();
-        return raw.stream().map(this::toDto).toList();
+        if (raw == null || raw.isEmpty()) return List.of();
+
+        List<OpenSatQuestion> shuffled = new ArrayList<>(raw);
+        Collections.shuffle(shuffled);
+        return shuffled.stream().limit(limit).map(this::toDto).toList();
     }
 
     private QuestionDto toDto(OpenSatQuestion raw) {

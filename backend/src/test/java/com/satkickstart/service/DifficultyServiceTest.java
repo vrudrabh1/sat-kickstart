@@ -15,7 +15,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class DifficultyServiceTest {
@@ -31,9 +31,10 @@ class DifficultyServiceTest {
     @BeforeEach
     void setUp() {
         progress = new UserProgress("session-1", Section.MATH);
-        when(progressRepository.findBySessionIdAndSection(any(), any()))
+        // lenient: these stubs are not called by every test (e.g. newUserStartsAtMedium)
+        lenient().when(progressRepository.findBySessionIdAndSection(any(), any()))
                 .thenReturn(Optional.of(progress));
-        when(progressRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        lenient().when(progressRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
     @Test
@@ -60,10 +61,9 @@ class DifficultyServiceTest {
     @Test
     void incorrectAnswerResetsCorrectStreak() {
         difficultyService.recordAnswer("session-1", Section.MATH, true);
-        difficultyService.recordAnswer("session-1", Section.MATH, false); // resets streak
-        difficultyService.recordAnswer("session-1", Section.MATH, true); // streak = 1 only
+        difficultyService.recordAnswer("session-1", Section.MATH, false);
+        difficultyService.recordAnswer("session-1", Section.MATH, true);
 
-        // Should NOT have escalated because streak was broken
         assertThat(progress.getDifficultyLevel()).isEqualTo(DifficultyLevel.MEDIUM);
     }
 
